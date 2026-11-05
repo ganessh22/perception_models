@@ -1,0 +1,10 @@
+{
+  "chip": "Apple M4",
+  "model": "Mac16,10",
+  "memory_gb": 16,
+  "gpu_cores": "10",
+  "macos": "26.7.2",
+  "low_power_mode": false,
+  "power_source": "Now drawing from 'AC Power'",
+  "quick": false
+}

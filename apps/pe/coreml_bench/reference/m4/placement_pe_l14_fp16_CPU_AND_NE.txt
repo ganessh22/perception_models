@@ -1,0 +1,25 @@
+pe_l14_fp16 / CPU_AND_NE: 1237 non-const ops
+cost share by device: {'none': 0.0, 'ANE': 0.0}
+
+op                               device    count     cost
+ios17.cast                       none          1   0.0000
+ios17.conv                       ANE           1   0.0000
+ios17.transpose                  ANE         127   0.0000
+ios17.reshape                    ANE         224   0.0000
+ios17.concat                     ANE          49   0.0000
+ios17.add                        ANE          98   0.0000
+ios17.layer_norm                 ANE          51   0.0000
+ios17.linear                     ANE         101   0.0000
+ios17.expand_dims                ANE          25   0.0000
+ios17.squeeze                    ANE         122   0.0000
+ios17.slice_by_index             ANE          74   0.0000
+ios17.mul                        ANE         168   0.0000
+split                            ANE          48   0.0000
+stack                            ANE          48   0.0000
+ios17.matmul                     ANE          50   0.0000
+ios16.softmax                    ANE          25   0.0000
+ios16.gelu                       ANE          25   0.0000
+
+device switches along the op sequence: 1
+non-ANE ops, and whether the ANE was supported for them:
+E5RT encountered an STL exception. msg = MILCompilerForANE error: failed to compile ANE model using ANEF. Error=_ANECompiler : ANECCompile() FAILED.

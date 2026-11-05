@@ -1,0 +1,23 @@
+pe_l14_fastC / CPU_AND_NE: 2542 non-const ops
+cost share by device: {'ANE': 1.0}
+
+op                               device    count     cost
+ios17.conv                       ANE         150   0.2981
+ios17.mul                        ANE         532   0.1888
+ios17.matmul                     ANE         770   0.1161
+ios16.softmax                    ANE         385   0.0946
+ios17.add                        ANE         149   0.0861
+ios17.reshape                    ANE         101   0.0433
+ios16.gelu                       ANE          25   0.0420
+split                            ANE          97   0.0384
+ios17.sub                        ANE          51   0.0222
+ios16.reduce_mean                ANE         102   0.0219
+ios17.real_div                   ANE          51   0.0219
+ios17.batch_norm                 ANE          51   0.0219
+ios17.concat                     ANE          25   0.0040
+ios17.expand_dims                ANE           1   0.0004
+ios17.cast                       ANE           1   0.0004
+ios17.sqrt                       ANE          51   0.0000
+
+device switches along the op sequence: 0
+non-ANE ops, and whether the ANE was supported for them:

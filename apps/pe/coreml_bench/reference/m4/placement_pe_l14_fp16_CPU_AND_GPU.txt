@@ -1,0 +1,41 @@
+pe_l14_fp16 / CPU_AND_GPU: 1237 non-const ops
+cost share by device: {'GPU': 1.0}
+
+op                               device    count     cost
+ios17.linear                     GPU         101   0.5016
+ios17.matmul                     GPU          50   0.1154
+ios17.transpose                  GPU         127   0.0754
+ios17.reshape                    GPU         224   0.0525
+ios17.add                        GPU          98   0.0500
+ios16.softmax                    GPU          25   0.0419
+ios17.mul                        GPU         168   0.0353
+ios17.slice_by_index             GPU          74   0.0285
+ios17.squeeze                    GPU         122   0.0236
+ios16.gelu                       GPU          25   0.0186
+ios17.concat                     GPU          49   0.0173
+ios17.expand_dims                GPU          25   0.0143
+ios17.layer_norm                 GPU          51   0.0097
+split                            GPU          48   0.0070
+stack                            GPU          48   0.0070
+ios17.conv                       GPU           1   0.0017
+ios17.cast                       GPU           1   0.0002
+
+device switches along the op sequence: 0
+non-ANE ops, and whether the ANE was supported for them:
+  ios17.reshape                on GPU  x224  supported=['CPU', 'GPU']
+  ios17.mul                    on GPU  x168  supported=['CPU', 'GPU']
+  ios17.transpose              on GPU  x127  supported=['CPU', 'GPU']
+  ios17.squeeze                on GPU  x122  supported=['CPU', 'GPU']
+  ios17.linear                 on GPU  x101  supported=['CPU', 'GPU']
+  ios17.add                    on GPU  x98   supported=['CPU', 'GPU']
+  ios17.slice_by_index         on GPU  x74   supported=['CPU', 'GPU']
+  ios17.layer_norm             on GPU  x51   supported=['CPU', 'GPU']
+  ios17.matmul                 on GPU  x50   supported=['CPU', 'GPU']
+  ios17.concat                 on GPU  x49   supported=['CPU', 'GPU']
+  split                        on GPU  x48   supported=['CPU', 'GPU']
+  stack                        on GPU  x48   supported=['CPU', 'GPU']
+  ios17.expand_dims            on GPU  x25   supported=['CPU', 'GPU']
+  ios16.softmax                on GPU  x25   supported=['CPU', 'GPU']
+  ios16.gelu                   on GPU  x25   supported=['CPU', 'GPU']
+  ios17.cast                   on GPU  x1    supported=['CPU', 'GPU']
+  ios17.conv                   on GPU  x1    supported=['CPU', 'GPU']
