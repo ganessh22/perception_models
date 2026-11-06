@@ -53,7 +53,7 @@ These need no sudo, and read models from `models/`, so build those first with `r
 
 - `profile_hw.py <stem> <unit> <seconds>`: memory traffic per image, and a histogram of Neural Engine bandwidth.
 - `profile_hw.py <stem> <unit> contention`: repeats the model under CPU load, with DRAM-heavy and cache-only variants.
-- `micro_ane.py [grid|sweep|mlp]`: peak Neural Engine throughput on stacks of 1x1 convs, the on-chip working-set limit, and
+- `micro_ane.py [grid|sweep|mlp]`: Neural Engine throughput on stacks of 1x1 convs, with call overhead included, the on-chip working-set limit, and
   whether splitting a wide layer helps.
 
 They use `aneopt.ioreport`, which reads a private Apple API, so channel names may differ on other chips. Only an

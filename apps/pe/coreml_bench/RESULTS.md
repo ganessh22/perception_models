@@ -268,7 +268,7 @@ levels. That's about a third of the M2 Pro's rated 200 GB/s, so this doesn't tes
 ### Peak throughput on synthetic models
 
 Stacks of 1x1 convs with random weights, using shape `(1, C, 1, S)`. Median times of a few milliseconds include call
-overhead, so the true peak may be somewhat higher.
+overhead, so these rates understate the peak, especially on the shortest runs.
 
 | Channels | Tokens | Layers | Activations | Weights | Median ms | Trillion MAC/s | Port GB/s | DRAM GB/s |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -283,6 +283,10 @@ overhead, so the true peak may be somewhat higher.
 | 128 | 4608 | 32 | 1152 KB | 1.0 MB | 1.5 | 1.62 | 41.7 | 2.4 |
 | 64 | 9216 | 64 | 1152 KB | 0.5 MB | 2.4 | 1.02 | 51.4 | 1.4 |
 
+These are plain conv stacks with call overhead included, so 4.53 is not this machine's peak. A split MLP reached 5.65 at
+6.9 ms (`split_mlp.jsonl`). With overhead removed, [`aneopt probe slope`](https://github.com/ganessh22/aneopt/blob/main/OPTIMISATION.md#the-old-peak-of-45-t-macs-was-too-low) gives **8.45 trillion MAC/s** on a 7x7,
+64-channel conv stack and 7.09 on a 1x1, 512-channel stack. 8.45 is the best of the graphs tried, not a limit of the chip.
+
 ### What this shows
 
 - **The port appears capped near 60 GB/s.** The weight-heavy synthetic model sustains 58 GB/s and original FP16 sustains
@@ -292,9 +296,11 @@ overhead, so the true peak may be somewhat higher.
   tile would explain this, but that's a hypothesis. Quantising reduces this traffic sharply.
 - **Time splits about evenly.** Across the three mode C models, latency fits roughly 47 ms + 12 ms per GB
   moved, using reads plus writes. Three points is a rough fit, but it implies about half of mode C's time is data movement.
-- **Computing runs close to peak.** The model needs about 190.6 billion multiply-adds, counting patch-level linear,
-  attention and MLP layers. That's about 2.0 trillion per second for mode C, or about 45% of the 4.53 trillion
-  measured here. At peak the same work takes 42-49 ms, close to the fit's non-transfer time.
+- **Computing runs well below peak.** The model needs about 190.6 billion multiply-adds, counting patch-level linear,
+  attention and MLP layers. That's about 2.0 trillion per second for mode C, or about 24% of the 8.45 trillion peak. At
+  that rate the same work takes about 23 ms, or about 27 ms at the 7.09 trillion of a 1x1 stack, against the fit's 47 ms of
+  non-transfer time. A real model has attention and other work that may never reach these rates, so treat them as a floor,
+  not a target.
 - **No counter gives "% of Neural Engine used".** The cluster stays powered about 99.9% of the time during inference, and
   a second copy of the model adds almost nothing, so the engine looks occupied rather than idle.
 
