@@ -15,6 +15,9 @@ Measured in November 2026. The raw data behind every table is in [`reference/`](
   Engine's own memory port, which appears capped near 60 GB/s. Shared DRAM bandwidth is not the limit.
 - **Avoid:** 4-bit palettes and activation quantisation, which gave broken output, and the original graph with 8-bit
   weights on the GPU, which takes over 800 ms on both machines.
+- **Newer and faster, on the M2 Pro only:** mode D takes 73.5 ms against mode C's 93.2-94.2 ms, with the same fidelity. With
+  8-bit conv weights it takes 68.5 ms, with a worst cosine of 0.9983. The tables below predate it, so see
+  [mode D](#mode-d-m2-pro-only). [Mode E](#mode-e-attend_cf-in-the-blocks) is faster still at 55.5 ms, with the same fidelity.
 
 ## Test setup
 
@@ -265,7 +268,7 @@ levels. That's about a third of the M2 Pro's rated 200 GB/s, so this doesn't tes
 ### Peak throughput on synthetic models
 
 Stacks of 1x1 convs with random weights, using shape `(1, C, 1, S)`. Median times of a few milliseconds include call
-overhead, so the true peak may be somewhat higher.
+overhead, so these rates understate the peak, especially on the shortest runs.
 
 | Channels | Tokens | Layers | Activations | Weights | Median ms | Trillion MAC/s | Port GB/s | DRAM GB/s |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -280,6 +283,10 @@ overhead, so the true peak may be somewhat higher.
 | 128 | 4608 | 32 | 1152 KB | 1.0 MB | 1.5 | 1.62 | 41.7 | 2.4 |
 | 64 | 9216 | 64 | 1152 KB | 0.5 MB | 2.4 | 1.02 | 51.4 | 1.4 |
 
+These are plain conv stacks with call overhead included, so 4.53 is not this machine's peak. A split MLP reached 5.65 at
+6.9 ms (`split_mlp.jsonl`). With overhead removed, [`aneopt probe slope`](https://github.com/ganessh22/aneopt/blob/main/OPTIMISATION.md#the-old-peak-of-45-t-macs-was-too-low) gives **8.45 trillion MAC/s** on a 7x7,
+64-channel conv stack and 7.09 on a 1x1, 512-channel stack. 8.45 is the best of the graphs tried, not a limit of the chip.
+
 ### What this shows
 
 - **The port appears capped near 60 GB/s.** The weight-heavy synthetic model sustains 58 GB/s and original FP16 sustains
@@ -289,20 +296,85 @@ overhead, so the true peak may be somewhat higher.
   tile would explain this, but that's a hypothesis. Quantising reduces this traffic sharply.
 - **Time splits about evenly.** Across the three mode C models, latency fits roughly 47 ms + 12 ms per GB
   moved, using reads plus writes. Three points is a rough fit, but it implies about half of mode C's time is data movement.
-- **Computing runs close to peak.** The model needs about 190.6 billion multiply-adds, counting patch-level linear,
-  attention and MLP layers. That's about 2.0 trillion per second for mode C, or about 45% of the 4.53 trillion
-  measured here. At peak the same work takes 42-49 ms, close to the fit's non-transfer time.
+- **Computing runs well below peak.** The model needs about 190.6 billion multiply-adds, counting patch-level linear,
+  attention and MLP layers. That's about 2.0 trillion per second for mode C, or about 24% of the 8.45 trillion peak. At
+  that rate the same work takes about 23 ms, or about 27 ms at the 7.09 trillion of a 1x1 stack, against the fit's 47 ms of
+  non-transfer time. A real model has attention and other work that may never reach these rates, so treat them as a floor,
+  not a target.
 - **No counter gives "% of Neural Engine used".** The cluster stays powered about 99.9% of the time during inference, and
   a second copy of the model adds almost nothing, so the engine looks occupied rather than idle.
 
 ### Next things to try
 
-- **Split the MLP by channels.** Turning the 1024-to-4096 layer into four 1024-to-1024 convs with the same weights makes each
-  output a quarter of the size, which may avoid re-reads. If they disappeared entirely, the fit suggests about 65-70 ms for
-  mode C on the M2 Pro. That's a best case and hasn't been tested.
 - **Avoid chunking across tokens.** Weight reads look higher at 577 tokens than at 144 or fewer, but these counters round
   heavily at that scale, so this is only weak evidence.
-- **Run the profilers on an M4.** Its port limit is the key unknown.
+- **Run the profilers and mode D on an M4.** Its port limit and on-chip limit are the key unknowns.
+
+## Mode D, M2 Pro only
+
+Measured after the tables above, on the same M2 Pro, with the rewrites run in turn in one session. The method and the general
+lessons are in [`OPTIMISATION.md`](../../aneopt/OPTIMISATION.md), and the raw data is in `reference/m2pro/rewrites.jsonl`,
+`working_set_sweep.jsonl` and `split_mlp.jsonl`.
+
+| Model | Median ms | Reads per image | Writes per image | DRAM reads per image | Mean cosine | Worst cosine |
+|---|---:|---:|---:|---:|---:|---:|
+| fastC | 94.2 | 3.41 GB | 0.56 GB | 1.47 GB | 0.999951 | 0.999793 |
+| fastDQ: split QKV | 96.1 | 3.49 GB | 0.65 GB | 1.45 GB | 0.999951 | 0.999793 |
+| fastDM: split MLP | 85.4 | 2.58 GB | 0.66 GB | 1.48 GB | 0.999952 | 0.999776 |
+| fastCP: two-stage patch conv | 84.0 | 2.73 GB | 0.56 GB | 0.78 GB | 0.999951 | 0.999794 |
+| fastDS: split MLP and QKV | 83.6 | 2.77 GB | 0.68 GB | 1.45 GB | 0.999952 | 0.999776 |
+| fastD: all splits, two-stage patch conv | 73.5 | 2.08 GB | 0.69 GB | 0.76 GB | 0.999951 | 0.999790 |
+| fastD_w8c: 8-bit conv weights only | 68.5 | 1.48 GB | 0.60 GB | 0.44 GB | 0.999294 | 0.998269 |
+| fastD_w8: all 8-bit weights | 66.8 | 1.28 GB | 0.60 GB | 0.38 GB | 0.998858 | 0.996314 |
+
+- **Compile and top-1:** all of these logged no compile failures, and all score 100% top-1.
+- **Repeats:** fastD, fastDS and fastD_w8 were run twice, with medians within 0.2 ms. Three runs of fastC gave 93.7, 94.2 and 94.7 ms.
+- **Load time:** the two-stage patch conv raises loading in a new process from about 30 s to about 53 s. The cause wasn't found.
+- **Against the old best:** fastD_w8c matches fastC15_p6g (68.3 ms) with much better fidelity. Its worst cosine is 0.9983 against 0.981.
+- **Other rewrites of mode D without the patch change:** turning off the conv-bias and batch-norm fusion passes gave 83.7 and 83.6 ms, and
+  so made no difference.
+- **Not measured:** mode D on the GPU or on the M4. The M4 gained less from earlier rewrites, so don't assume the same gains there.
+
+### Mode E: `attend_cf` in the blocks
+
+Mode E is mode D with each block's attention done by `aneopt.layers.attend_cf`, on channels-first tensors. RoPE is unchanged, and the pooling attention still uses `attend`.
+Latency and traffic are the median of five alternating 15 s runs in new processes, measured together, so mode D is re-measured here. Raw data is in `reference/m2pro/attend_cf.jsonl`.
+
+| Model | Median ms | Reads per image | Writes per image | DRAM reads per image | Mean cosine | Worst cosine |
+|---|---:|---:|---:|---:|---:|---:|
+| fastD | 72.9 | 2.08 GB | 0.68 GB | 0.76 GB | 0.999951 | 0.999790 |
+| fastE | 55.5 | 1.83 GB | 0.60 GB | 0.76 GB | 0.999951 | 0.999795 |
+
+- **Saving:** 17.4 ms, or 24%, against the microbenchmark's prediction of up to about 18 ms. Both score 100% top-1 and are planned entirely on the Neural Engine.
+- **Cause:** not known. Traffic barely changes and MACs are identical, so `aneopt diagnose` reports 76% of peak MAC rate against 59%, with both compute-limited. Those shares used a 4.51 peak. Against the 8.45 peak they're about 41% and 31%.
+- **Load time:** noisy here at 45-107 s for fastE and 56-533 s for fastD, with another build running on the machine, so these aren't a comparison.
+- **Not measured:** the M4, the GPU, and 8-bit weights on mode E.
+- **Setup:** mode E needs `aneopt` with `attend_cf`, from [its repository](https://github.com/ganessh22/aneopt). The older copy that `setup.sh` installs doesn't have it. Modes A to D still build with that copy.
+
+### The on-chip working-set limit
+
+`micro_ane.py sweep` on 256-channel stacks shows a step between 1792 and 2048 KiB. Throughput falls from 2.41 to 1.57 trillion
+MAC/s, writes per run rise from 0.018 to 0.067 GB, and the port reaches about 62 GB/s. Mode C has activations of about 4.98 MB and
+3.74 MB in every block, and `aneopt audit` finds none over the limit in mode D. The 1024-channel stacks show a smaller drop, from 3.86
+to 3.13 trillion MAC/s, between 1154 and 2048 KiB.
+
+This explains part of the unexplained reads above, but not all of them. Mode D still reads 2.08 GB per image from about 0.6 GB of
+weights.
+
+### Comparison with ANEForge
+
+ANEForge 0.4.0 compiles to private `e5rt` APIs without CoreML. The port in `pe_aneforge.py` mirrors modes C and D, and always uses the
+two-stage patch conv, because the alternatives failed: `space_to_depth` by 7 or 14 wouldn't compile, and a 14x14 conv hit a Python
+shape check.
+
+| Graph | ANEForge ms | CoreML ms | ANEForge worst cosine | CoreML worst cosine |
+|---|---:|---:|---:|---:|
+| Mode C with two-stage patch conv | 84.6 | 84.0 | 0.999788 | 0.999794 |
+| Mode D, without its pooling split | 74.1 | 73.5 (with it) | 0.999802 | 0.999790 |
+| Mode D, 8-bit conv weights | 69.6 | 68.5 | 0.998319 | 0.998269 |
+
+ANEForge compiles the full graph in about 55 s. Its zero-copy path takes about 0.8 ms less than a call with copies. Fidelity and traffic
+closely match CoreML on the same graph, so we see no speed advantage from the direct route on this model.
 
 ## Projection for the M6 (not measured)
 

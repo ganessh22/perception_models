@@ -6,6 +6,11 @@ Modes, so each change's gain can be measured separately:
   B  channels-first (B,C,1,S). 1x1 convs instead of linear, RoPE swap as a fixed grouped conv applied
      before the head reshape, attention rearranged to need one transpose rather than several.
   C  B, with attention run per head (Apple's "split einsum" pattern for the ANE).
+  D  C, with two changes. Wide QKV, MLP and pooling layers are split into 1024-channel branches, so no activation
+     passes the Neural Engine's on-chip limit of about 2 MB. The 14x14 patch conv becomes an exact two-stage conv.
+  E  D, with each block's attention done by attend_cf's per-head einsums on (B,C,1,S), with no reshape to (B,h,d,S).
+Variants that isolate each part of D: CP is C with the two-stage patch conv. DS is D without it. DM and DQ split only
+the MLP or only QKV, also without it.
 """
 import math
 import sys
@@ -17,30 +22,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import core.vision_encoder.pe as pe
-
-
-def conv1x1(weight, bias=None):
-    """Conv2d equal to F.linear(x, weight, bias), for channels-first input."""
-    c = nn.Conv2d(weight.shape[1], weight.shape[0], 1, bias=bias is not None)
-    c.weight.data = weight[:, :, None, None].clone()
-    if bias is not None:
-        c.bias.data = bias.clone()
-    return c
-
-
-class LayerNormCF(nn.Module):
-    """LayerNorm over channel axis 1. CoreML's layer_norm needs trailing axes, so this is spelled out."""
-
-    def __init__(self, ln):
-        super().__init__()
-        self.eps = ln.eps
-        self.gamma = nn.Parameter(ln.weight.data[None, :, None, None].clone())
-        self.beta = nn.Parameter(ln.bias.data[None, :, None, None].clone())
-
-    def forward(self, x):
-        z = x - x.mean(1, keepdim=True)
-        var = (z * z).mean(1, keepdim=True)
-        return z / torch.sqrt(var + self.eps) * self.gamma + self.beta
+from aneopt.layers import LayerNormCF, RotateHalf, SplitIn, SplitOut, attend, conv1x1, factor_patch_conv
 
 
 def rope_tables(model):
@@ -82,34 +64,19 @@ class BlockA(nn.Module):
         return x + self.mlp(self.ln_2(x))
 
 
-class RopeSwap(nn.Module):
-    """rotate_half on channels, as a constant grouped conv: each pair (a, b) maps to (-b, a)."""
-
-    def __init__(self, channels):
-        super().__init__()
-        self.conv = nn.Conv2d(channels, channels, 1, groups=channels // 2, bias=False)
-        w = torch.tensor([[0.0, -1.0], [1.0, 0.0]]).repeat(channels // 2, 1)
-        self.conv.weight.data = w[:, :, None, None]
-
-    def forward(self, x):
-        return self.conv(x)
-
-
-def attend(q, k, v, scale):
-    """q, k, v are (B,h,d,S). k^T q is (B,h,Sk,Sq), so softmax over Sk and v @ W needs no more transposes."""
-    w = torch.matmul(k.transpose(-1, -2), q) * scale
-    return torch.matmul(v, w.softmax(dim=-2))
-
-
 class AttnB(nn.Module):
     split_heads = False
 
-    def __init__(self, a, freq):
+    def __init__(self, a, freq, split_qkv=False):
         super().__init__()
         self.h, self.d, self.e = a.num_heads, a.head_dim, a.embed_dim
-        self.proj = conv1x1(a.in_proj_weight.data, a.in_proj_bias.data)
+        self.split_qkv = split_qkv
+        if split_qkv:
+            self.proj = SplitOut(a.in_proj_weight.data, a.in_proj_bias.data, self.e)
+        else:
+            self.proj = conv1x1(a.in_proj_weight.data, a.in_proj_bias.data)
         self.out = conv1x1(a.out_proj.weight.data, a.out_proj.bias.data)
-        self.swap = RopeSwap(self.e)
+        self.swap = RotateHalf(self.e)
         self.scale = a.scale
         # (S,d) -> (1,E,1,S), the same rotation for every head
         table = lambda t: t.T.repeat(self.h, 1)[None, :, None, :]
@@ -118,7 +85,7 @@ class AttnB(nn.Module):
 
     def forward(self, x):
         b, _, _, s = x.shape
-        q, k, v = self.proj(x).split(self.e, dim=1)
+        q, k, v = self.proj(x) if self.split_qkv else self.proj(x).split(self.e, dim=1)
         q = q * self.cos + self.swap(q) * self.sin
         k = k * self.cos + self.swap(k) * self.sin
         if self.split_heads:
@@ -137,16 +104,35 @@ class AttnC(AttnB):
     split_heads = True
 
 
+class AttnE(AttnB):
+    def forward(self, x):
+        from aneopt.layers import attend_cf  # local because the older aneopt copy that setup.sh installs doesn't have it
+
+        q, k, v = self.proj(x)
+        # The RoPE tables hold the same (h, d) channel order that attend_cf slices, so the rotation is unchanged.
+        q = q * self.cos + self.swap(q) * self.sin
+        k = k * self.cos + self.swap(k) * self.sin
+        return self.out(attend_cf(q, k, v, self.scale, self.h))
+
+
 class BlockB(nn.Module):
-    def __init__(self, r, freq, attn_cls):
+    def __init__(self, r, freq, attn_cls, split_mlp=False, split_qkv=False):
         super().__init__()
-        self.attn = attn_cls(r.attn, freq)
+        self.attn = attn_cls(r.attn, freq, split_qkv)
         self.ln_1, self.ln_2 = LayerNormCF(r.ln_1), LayerNormCF(r.ln_2)
-        self.fc = conv1x1(r.mlp.c_fc.weight.data, r.mlp.c_fc.bias.data)
-        self.proj = conv1x1(r.mlp.c_proj.weight.data, r.mlp.c_proj.bias.data)
+        self.split_mlp = split_mlp
+        fc, proj = r.mlp.c_fc, r.mlp.c_proj
+        if split_mlp:
+            self.fc = SplitOut(fc.weight.data, fc.bias.data, proj.out_features)
+            self.proj = SplitIn(proj.weight.data, proj.bias.data, proj.out_features)
+        else:
+            self.fc = conv1x1(fc.weight.data, fc.bias.data)
+            self.proj = conv1x1(proj.weight.data, proj.bias.data)
 
     def forward(self, x):
         x = x + self.attn(self.ln_1(x))
+        if self.split_mlp:
+            return x + self.proj([F.gelu(t) for t in self.fc(self.ln_2(x))])
         return x + self.proj(F.gelu(self.fc(self.ln_2(x))))
 
 
@@ -155,7 +141,7 @@ class FastPE(nn.Module):
         super().__init__()
         self.mode = mode
         freq = rope_tables(m)
-        self.conv1 = m.conv1
+        self.conv1 = factor_patch_conv(m.conv1, 7) if mode in ("D", "E", "CP") else m.conv1
         ap = m.attn_pool
         self.pool_h, self.pool_d = ap.num_heads, ap.embed_dim // ap.num_heads
         e = m.width
@@ -177,16 +163,19 @@ class FastPE(nn.Module):
             self.pool_out = ap.attn.out_proj
             self.final = nn.Parameter(m.proj.data.clone())
         else:
-            attn_cls = AttnC if mode == "C" else AttnB
+            attn_cls = {"B": AttnB, "E": AttnE}.get(mode, AttnC)
+            split_mlp, split_qkv = mode in ("D", "E", "DS", "DM"), mode in ("D", "E", "DS", "DQ")
+            self.split_pool = mode in ("D", "E")
             self.cls = nn.Parameter(m.class_embedding.data[None, :, None, None].clone())
             self.pos = nn.Parameter(m.positional_embedding.data.T[None, :, None, :].clone())
             self.ln_pre, self.ln_post = LayerNormCF(m.ln_pre), LayerNormCF(m.ln_post)
-            self.blocks = nn.ModuleList(BlockB(r, freq, attn_cls) for r in m.transformer.resblocks)
+            self.blocks = nn.ModuleList(BlockB(r, freq, attn_cls, split_mlp, split_qkv) for r in m.transformer.resblocks)
             self.pool_ln = LayerNormCF(ap.layernorm)
             self.pool_fc = conv1x1(ap.mlp.c_fc.weight.data, ap.mlp.c_fc.bias.data)
             self.pool_proj = conv1x1(ap.mlp.c_proj.weight.data, ap.mlp.c_proj.bias.data)
             self.register_buffer("pool_q", q.reshape(1, self.pool_h, self.pool_d, 1))
-            self.pool_kv = conv1x1(torch.cat([wk, wv]), torch.cat([bk, bv]))
+            pool_kv = SplitOut if self.split_pool else (lambda w, b, _: conv1x1(w, b))
+            self.pool_kv = pool_kv(torch.cat([wk, wv]), torch.cat([bk, bv]), e)
             self.pool_out = conv1x1(ap.attn.out_proj.weight.data, ap.attn.out_proj.bias.data)
             self.final = conv1x1(m.proj.data.T)
         self.e = e
@@ -220,7 +209,8 @@ class FastPE(nn.Module):
             x = blk(x)
         x = self.ln_post(x)
         s = x.shape[3]
-        k, v = [t.reshape(b, self.pool_h, self.pool_d, s) for t in self.pool_kv(x).split(self.e, dim=1)]
+        kv = self.pool_kv(x) if self.split_pool else self.pool_kv(x).split(self.e, dim=1)
+        k, v = [t.reshape(b, self.pool_h, self.pool_d, s) for t in kv]
         a = attend(self.pool_q.expand(b, -1, -1, -1), k, v, self.pool_scale)
         y = self.pool_out(a.reshape(b, self.e, 1, 1))
         y = y + self.pool_proj(F.gelu(self.pool_fc(self.pool_ln(y))))
@@ -231,7 +221,7 @@ def main():
     from pathlib import Path
 
     here = Path(__file__).parent
-    modes = sys.argv[1:] or ["A", "B", "C"]
+    modes = sys.argv[1:] or ["A", "B", "C", "D"]
     ref_model = pe.VisionTransformer.from_config("PE-Core-L14-336", pretrained=True).eval()
     val = torch.from_numpy(np.load(here / "data" / "val.npy", mmap_mode="r")[::50].copy())
     with torch.no_grad():
