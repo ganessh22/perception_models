@@ -123,4 +123,4 @@ Answers question 3. It takes one line, but expect little: use `attend_cf` in `fo
 
 - **Update `apps/aneopt`, or `setup.sh`.** Until one of them changes, a fresh `setup.sh` can't build mode E. Once either changes, `attend_cf` can become a normal import at the top of `pe_fast.py`.
 - **Add mode E to `run.sh`.** `run_all.py` doesn't build or measure it.
-- **Reword the `OPTIMISATION.md` summary if question 2 changes it.** It says compression has only been measured without `attend_cf`, and it still calls PE-Core memory-limited. The new section explains that this no longer holds after the rewrites.
+- **Reword the `OPTIMISATION.md` summary if question 2 changes it.** It says compression has only been measured without `attend_cf`, and that PE-Core started out memory-limited and became compute-limited.

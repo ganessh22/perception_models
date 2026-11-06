@@ -60,7 +60,7 @@ They use `aneopt.ioreport`, which reads a private Apple API, so channel names ma
 M2 Pro on macOS 27 has been tested. For Neural Engine power, use `sudo powermetrics --samplers ane_power`.
 
 The reusable parts of this benchmark are in the [`aneopt`](../../aneopt) package, which `setup.sh` installs. To apply the same
-method to another model, see [`OPTIMISATION.md`](../../aneopt/OPTIMISATION.md).
+method to another model, see [`OPTIMISATION.md`](https://github.com/ganessh22/aneopt/blob/main/OPTIMISATION.md).
 
 ## Scripts
 

@@ -3,7 +3,9 @@
 Tools for finding and removing Apple Neural Engine bottlenecks in CoreML models. They grew out of optimising
 PE-Core-L14, and they apply to other models, especially transformers.
 
-The method, the findings and the tools it builds on are in [OPTIMISATION.md](OPTIMISATION.md).
+The method, the findings and the tools it builds on are in [OPTIMISATION.md](https://github.com/ganessh22/aneopt/blob/main/OPTIMISATION.md).
+
+This is an older copy of the package, which `setup.sh` installs. The current one, with `attend_cf` and `probe slope`, is in the [`aneopt` repository](https://github.com/ganessh22/aneopt).
 
 ## Install
 

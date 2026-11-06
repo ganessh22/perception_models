@@ -313,7 +313,7 @@ These are plain conv stacks with call overhead included, so 4.53 is not this mac
 ## Mode D, M2 Pro only
 
 Measured after the tables above, on the same M2 Pro, with the rewrites run in turn in one session. The method and the general
-lessons are in [`OPTIMISATION.md`](../../aneopt/OPTIMISATION.md), and the raw data is in `reference/m2pro/rewrites.jsonl`,
+lessons are in [`OPTIMISATION.md`](https://github.com/ganessh22/aneopt/blob/main/OPTIMISATION.md), and the raw data is in `reference/m2pro/rewrites.jsonl`,
 `working_set_sweep.jsonl` and `split_mlp.jsonl`.
 
 | Model | Median ms | Reads per image | Writes per image | DRAM reads per image | Mean cosine | Worst cosine |
