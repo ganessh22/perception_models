@@ -48,22 +48,26 @@ These need no sudo, and read models from `models/`, so build those first with `r
 ```
 
 ```bash
-.venv/bin/python micro_ane.py
+.venv/bin/python micro_ane.py sweep
 ```
 
 - `profile_hw.py <stem> <unit> <seconds>`: memory traffic per image, and a histogram of Neural Engine bandwidth.
 - `profile_hw.py <stem> <unit> contention`: repeats the model under CPU load, with DRAM-heavy and cache-only variants.
-- `micro_ane.py`: peak Neural Engine throughput on stacks of 1x1 convs, varying activation and weight size.
+- `micro_ane.py [grid|sweep|mlp]`: peak Neural Engine throughput on stacks of 1x1 convs, the on-chip working-set limit, and
+  whether splitting a wide layer helps.
 
-They use `ioreport.py`, which reads a private Apple API, so channel names may differ on other chips. Only an
+They use `aneopt.ioreport`, which reads a private Apple API, so channel names may differ on other chips. Only an
 M2 Pro on macOS 27 has been tested. For Neural Engine power, use `sudo powermetrics --samplers ane_power`.
+
+The reusable parts of this benchmark are in the [`aneopt`](../../aneopt) package, which `setup.sh` installs. To apply the same
+method to another model, see [`OPTIMISATION.md`](../../aneopt/OPTIMISATION.md).
 
 ## Scripts
 
 | Script | What it does |
 |---|---|
 | `export_coreml.py` | Converts the original model to FP16 and FP32 CoreML packages |
-| `pe_fast.py` | Builds the rewritten graphs, modes A, B and C |
+| `pe_fast.py` | Builds the rewritten graphs, modes A, B, C and D |
 | `quantize.py` | Builds `w8`, `p6`, `p4` and `a8w8` from the FP16 package |
 | `variants.py` | Builds quantised mode C, batch-4 graphs and macOS 15 grouped palettes |
 | `prep_data.py` | Preprocesses Imagenette into `data/` |
@@ -72,6 +76,7 @@ M2 Pro on macOS 27 has been tested. For Neural Engine power, use `sudo powermetr
 | `fidelity.py` | Scores saved embeddings against PyTorch FP32 on CPU |
 | `profile_plan.py` | Reports CoreML's per-op device plan and estimated cost |
 | `run_all.py`, `summary.py` | Run everything and write the summary |
+| `export_weights.py`, `pe_aneforge.py` | Optional: run modes C and D through ANEForge, in a separate environment |
 
 `run.sh` builds and runs `w8` and `p6`. To build the `p4` and `a8w8` packages, run `quantize.py` with those names.
 Both gave broken output when tested, as `RESULTS.md` describes.
@@ -83,8 +88,10 @@ Both gave broken output when tested, as `RESULTS.md` describes.
 | `pe_l14_fp16`, `pe_l14_fp32` | Direct conversion of the original model |
 | `pe_l14_fastA` | Original layout, with attention and RoPE cleaned up |
 | `pe_l14_fastB` | Channels-first `(B,C,1,S)`, 1x1 convs, RoPE swap as a fixed grouped conv |
-| `pe_l14_fastC` | B, with attention run per head. Built for the Neural Engine |
+| `pe_l14_fastC` | B, with attention run per head |
+| `pe_l14_fastD` | C, with wide layers split by channel and a two-stage patch conv. The fastest lossless graph on the M2 Pro |
 | `*_w8`, `*_p6` | 8-bit weights, 6-bit palettised weights |
+| `*_w8c` | 8-bit conv weights only, which keeps positional tables at full precision |
 | `*15_p6g` | 6-bit palette per channel group, needs macOS 15 |
 | `*_b4` | Batch size 4 graphs |
 
