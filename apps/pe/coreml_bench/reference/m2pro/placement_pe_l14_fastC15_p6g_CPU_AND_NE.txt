@@ -1,0 +1,27 @@
+pe_l14_fastC15_p6g / CPU_AND_NE: 2644 non-const ops
+cost share by device: {'none': 0.0, 'CPU': 0.0037, 'ANE': 0.8888}
+
+op                               device    count     cost
+ios18.conv                       ANE         149   0.4267
+ios18.mul                        ANE         532   0.1243
+ios18.add                        ANE         149   0.0715
+ios18.matmul                     ANE         770   0.0711
+ios18.softmax                    ANE         385   0.0580
+ios18.reshape                    ANE         101   0.0265
+ios18.gelu                       ANE          25   0.0257
+split                            ANE          97   0.0235
+ios18.sub                        ANE          51   0.0184
+ios16.reduce_mean                ANE         102   0.0134
+ios18.real_div                   ANE          51   0.0134
+ios18.batch_norm                 ANE          51   0.0134
+ios18.conv                       CPU           1   0.0034
+ios18.concat                     ANE          25   0.0024
+ios18.cast                       CPU           1   0.0003
+ios18.expand_dims                ANE           1   0.0003
+ios18.sqrt                       ANE          51   0.0000
+ios18.constexpr_lut_to_dense     none        102   0.0000
+
+device switches along the op sequence: 1
+non-ANE ops, and whether the ANE was supported for them:
+  ios18.cast                   on CPU  x1    supported=['ANE', 'CPU']
+  ios18.conv                   on CPU  x1    supported=['CPU']

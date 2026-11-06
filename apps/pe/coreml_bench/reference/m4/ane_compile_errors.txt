@@ -1,0 +1,5 @@
+bench: coreml pe_l14_fp16 CPU_AND_NE
+bench: coreml pe_l14_fp16 ALL
+bench: coreml pe_l14_w8 CPU_AND_NE
+bench: coreml pe_l14_p6 CPU_AND_NE
+placement: pe_l14_fp16 CPU_AND_NE

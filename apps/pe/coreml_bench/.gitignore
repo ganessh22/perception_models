@@ -1,0 +1,12 @@
+.venv
+.uv
+data
+models
+micro
+embeds
+results
+results_previous
+/results.jsonl
+/throughput.jsonl
+pe_coreml_results_*.zip
+__pycache__

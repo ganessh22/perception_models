@@ -1,0 +1,15 @@
+{"total_images_per_s": 7.63, "workers": [{"spec": "pe_l14_fp16:CPU_AND_GPU:1", "images_per_s": 7.63, "cos_min": 0.999998}]}
+{"total_images_per_s": 12.66, "workers": [{"spec": "pe_l14_fastC:CPU_AND_NE:1", "images_per_s": 12.66, "cos_min": 0.999984}]}
+{"total_images_per_s": 20.03, "workers": [{"spec": "pe_l14_fastC:CPU_AND_NE:1", "images_per_s": 12.62, "cos_min": 0.999984}, {"spec": "pe_l14_fp16:CPU_AND_GPU:1", "images_per_s": 7.41, "cos_min": 0.999998}]}
+{"total_images_per_s": 7.51, "workers": [{"spec": "pe_l14_fp16_b4:CPU_AND_GPU:4", "images_per_s": 7.51, "cos_min": 0.999984}]}
+{"total_images_per_s": 11.99, "workers": [{"spec": "pe_l14_fastC_b4:CPU_AND_NE:4", "images_per_s": 11.99, "cos_min": 0.999933}]}
+{"total_images_per_s": 12.79, "workers": [{"spec": "pe_l14_fastC:CPU_AND_NE:1", "images_per_s": 6.39, "cos_min": 0.999984}, {"spec": "pe_l14_fastC:CPU_AND_NE:1", "images_per_s": 6.4, "cos_min": 0.999984}]}
+{"total_images_per_s": 8.04, "workers": [{"spec": "pe_l14_fp16:CPU_AND_GPU:1", "images_per_s": 4.02, "cos_min": 0.999998}, {"spec": "pe_l14_fp16:CPU_AND_GPU:1", "images_per_s": 4.02, "cos_min": 0.999998}]}
+{"total_images_per_s": 23.08, "workers": [{"spec": "pe_l14_fastC:CPU_AND_NE:1", "images_per_s": 10.97, "cos_min": 0.999984}, {"spec": "pe_l14_fp16:CPU_AND_GPU:1", "images_per_s": 7.13, "cos_min": 0.999998}, {"spec": "pe_l14_fp16:CPU_ONLY:1", "images_per_s": 4.98, "cos_min": 0.999838}]}
+{"total_images_per_s": 16.43, "workers": [{"spec": "pe_l14_fastC_w8:CPU_AND_NE:1", "images_per_s": 16.43, "cos_min": 0.998942}]}
+{"total_images_per_s": 18.0, "workers": [{"spec": "pe_l14_fastC15_p6g:CPU_AND_NE:1", "images_per_s": 18.0, "cos_min": 0.996833}]}
+{"total_images_per_s": 23.97, "workers": [{"spec": "pe_l14_fastC_w8:CPU_AND_NE:1", "images_per_s": 16.46, "cos_min": 0.998942}, {"spec": "pe_l14_fp16:CPU_AND_GPU:1", "images_per_s": 7.51, "cos_min": 0.999998}]}
+{"total_images_per_s": 25.43, "workers": [{"spec": "pe_l14_fastC15_p6g:CPU_AND_NE:1", "images_per_s": 17.99, "cos_min": 0.996833}, {"spec": "pe_l14_fp16:CPU_AND_GPU:1", "images_per_s": 7.44, "cos_min": 0.999998}]}
+{"total_images_per_s": 26.81, "workers": [{"spec": "pe_l14_fastC_w8:CPU_AND_NE:1", "images_per_s": 14.23, "cos_min": 0.998942}, {"spec": "pe_l14_fp16:CPU_AND_GPU:1", "images_per_s": 7.2, "cos_min": 0.999998}, {"spec": "pe_l14_fp16:CPU_ONLY:1", "images_per_s": 5.38, "cos_min": 0.999838}]}
+{"total_images_per_s": 7.58, "workers": [{"spec": "pe_l14_fp16:CPU_AND_GPU:1", "images_per_s": 7.58, "cos_min": 0.999998}]}
+{"total_images_per_s": 12.66, "workers": [{"spec": "pe_l14_fastC:CPU_AND_NE:1", "images_per_s": 12.66, "cos_min": 0.999984}]}
