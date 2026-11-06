@@ -125,7 +125,7 @@ def main():
             for unit in ("CPU_ONLY", "CPU_AND_GPU", "CPU_AND_NE"):
                 bench("coreml", stem, unit)
         for stem in ("pe_l14_w8", "pe_l14_p6", "pe_l14_fastC_w8", "pe_l14_fastC_p6", "pe_l14_fastC15",
-                     "pe_l14_fastC15_p6g"):
+                     "pe_l14_fastC15_p6g", "pe_l14_fastD", "pe_l14_fastD_w8", "pe_l14_fastD_w8c"):
             for unit in ("CPU_AND_GPU", "CPU_AND_NE"):
                 bench("coreml", stem, unit)
 

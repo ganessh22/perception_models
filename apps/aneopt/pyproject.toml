@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aneopt"
+version = "0.1.0"
+description = "Find and remove Apple Neural Engine bottlenecks in CoreML models"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "coremltools>=9,<10",
+    "numpy<2.4",  # coremltools 9.0 failed with numpy 2.4
+    "torch>=2.2",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+aneopt = "aneopt.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

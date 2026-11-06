@@ -1,0 +1,13 @@
+{"model": "fastC", "runtime": "CoreML", "median_ms": 94.2, "read_gb_img": 3.414, "write_gb_img": 0.561, "dram_read_gb_img": 1.466, "cos_mean": 0.999951, "cos_worst": 0.999793}
+{"model": "fastCP", "runtime": "CoreML", "median_ms": 84.0, "read_gb_img": 2.725, "write_gb_img": 0.563, "dram_read_gb_img": 0.777, "cos_mean": 0.999951, "cos_worst": 0.999794}
+{"model": "fastDQ", "runtime": "CoreML", "median_ms": 96.1, "read_gb_img": 3.488, "write_gb_img": 0.653, "dram_read_gb_img": 1.453, "cos_mean": 0.999951, "cos_worst": 0.999793}
+{"model": "fastDM", "runtime": "CoreML", "median_ms": 85.4, "read_gb_img": 2.582, "write_gb_img": 0.658, "dram_read_gb_img": 1.477, "cos_mean": 0.999952, "cos_worst": 0.999776}
+{"model": "fastDS", "runtime": "CoreML", "median_ms": 83.6, "read_gb_img": 2.766, "write_gb_img": 0.682, "dram_read_gb_img": 1.452, "cos_mean": 0.999952, "cos_worst": 0.999776}
+{"model": "fastD", "runtime": "CoreML", "median_ms": 73.5, "read_gb_img": 2.083, "write_gb_img": 0.69, "dram_read_gb_img": 0.757, "cos_mean": 0.999951, "cos_worst": 0.99979}
+{"model": "fastC_w8", "runtime": "CoreML", "median_ms": 74.9, "read_gb_img": 1.6, "write_gb_img": 0.562, "dram_read_gb_img": 0.402, "cos_mean": 0.998791, "cos_worst": 0.996382}
+{"model": "fastD_w8", "runtime": "CoreML", "median_ms": 66.8, "read_gb_img": 1.284, "write_gb_img": 0.596, "dram_read_gb_img": 0.383, "cos_mean": 0.998858, "cos_worst": 0.996314}
+{"model": "fastD_w8c", "runtime": "CoreML", "median_ms": 68.5, "read_gb_img": 1.482, "write_gb_img": 0.601, "dram_read_gb_img": 0.442, "cos_mean": 0.999294, "cos_worst": 0.998269}
+{"model": "C", "runtime": "ANEForge", "median_ms": 84.6, "read_gb_img": 2.727, "write_gb_img": 0.561, "dram_read_gb_img": 0.78, "cos_mean": 0.99995, "cos_worst": 0.999788}
+{"model": "D without pooling split", "runtime": "ANEForge", "median_ms": 74.1, "read_gb_img": 2.023, "write_gb_img": 0.633, "dram_read_gb_img": 0.758, "cos_mean": 0.99995, "cos_worst": 0.999802}
+{"model": "D with spelled-out LayerNorm", "runtime": "ANEForge", "median_ms": 74.0, "read_gb_img": 2.022, "write_gb_img": 0.632, "dram_read_gb_img": 0.757, "cos_mean": 0.99995, "cos_worst": 0.999802}
+{"model": "D conv-only int8", "runtime": "ANEForge", "median_ms": 69.6, "read_gb_img": 1.486, "write_gb_img": 0.609, "dram_read_gb_img": 0.443, "cos_mean": 0.999304, "cos_worst": 0.998319}

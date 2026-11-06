@@ -22,6 +22,7 @@ export UV_PYTHON_INSTALL_DIR="$PWD/.uv/python"
 echo "== Creating Python 3.11 environment"
 "$UV" venv --python 3.11 --allow-existing .venv
 "$UV" pip install --python .venv/bin/python -r requirements.lock
+"$UV" pip install --python .venv/bin/python --no-deps -e ../../aneopt
 
 echo "== Downloading PE-Core-L14-336 weights"
 .venv/bin/python -c "

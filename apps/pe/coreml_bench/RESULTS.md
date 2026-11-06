@@ -15,6 +15,9 @@ Measured in November 2026. The raw data behind every table is in [`reference/`](
   Engine's own memory port, which appears capped near 60 GB/s. Shared DRAM bandwidth is not the limit.
 - **Avoid:** 4-bit palettes and activation quantisation, which gave broken output, and the original graph with 8-bit
   weights on the GPU, which takes over 800 ms on both machines.
+- **Newer and faster, on the M2 Pro only:** mode D takes 73.5 ms against mode C's 93.2-94.2 ms, with the same fidelity. With
+  8-bit conv weights it takes 68.5 ms, with a worst cosine of 0.9983. The tables below predate it, so see
+  [mode D](#mode-d-m2-pro-only).
 
 ## Test setup
 
@@ -297,12 +300,59 @@ overhead, so the true peak may be somewhat higher.
 
 ### Next things to try
 
-- **Split the MLP by channels.** Turning the 1024-to-4096 layer into four 1024-to-1024 convs with the same weights makes each
-  output a quarter of the size, which may avoid re-reads. If they disappeared entirely, the fit suggests about 65-70 ms for
-  mode C on the M2 Pro. That's a best case and hasn't been tested.
 - **Avoid chunking across tokens.** Weight reads look higher at 577 tokens than at 144 or fewer, but these counters round
   heavily at that scale, so this is only weak evidence.
-- **Run the profilers on an M4.** Its port limit is the key unknown.
+- **Run the profilers and mode D on an M4.** Its port limit and on-chip limit are the key unknowns.
+
+## Mode D, M2 Pro only
+
+Measured after the tables above, on the same M2 Pro, with the rewrites run in turn in one session. The method and the general
+lessons are in [`OPTIMISATION.md`](../../aneopt/OPTIMISATION.md), and the raw data is in `reference/m2pro/rewrites.jsonl`,
+`working_set_sweep.jsonl` and `split_mlp.jsonl`.
+
+| Model | Median ms | Reads per image | Writes per image | DRAM reads per image | Mean cosine | Worst cosine |
+|---|---:|---:|---:|---:|---:|---:|
+| fastC | 94.2 | 3.41 GB | 0.56 GB | 1.47 GB | 0.999951 | 0.999793 |
+| fastDQ: split QKV | 96.1 | 3.49 GB | 0.65 GB | 1.45 GB | 0.999951 | 0.999793 |
+| fastDM: split MLP | 85.4 | 2.58 GB | 0.66 GB | 1.48 GB | 0.999952 | 0.999776 |
+| fastCP: two-stage patch conv | 84.0 | 2.73 GB | 0.56 GB | 0.78 GB | 0.999951 | 0.999794 |
+| fastDS: split MLP and QKV | 83.6 | 2.77 GB | 0.68 GB | 1.45 GB | 0.999952 | 0.999776 |
+| fastD: all splits, two-stage patch conv | 73.5 | 2.08 GB | 0.69 GB | 0.76 GB | 0.999951 | 0.999790 |
+| fastD_w8c: 8-bit conv weights only | 68.5 | 1.48 GB | 0.60 GB | 0.44 GB | 0.999294 | 0.998269 |
+| fastD_w8: all 8-bit weights | 66.8 | 1.28 GB | 0.60 GB | 0.38 GB | 0.998858 | 0.996314 |
+
+- **Compile and top-1:** all of these logged no compile failures, and all score 100% top-1.
+- **Repeats:** fastD, fastDS and fastD_w8 were run twice, with medians within 0.2 ms. Three runs of fastC gave 93.7, 94.2 and 94.7 ms.
+- **Load time:** the two-stage patch conv raises loading in a new process from about 30 s to about 53 s. The cause wasn't found.
+- **Against the old best:** fastD_w8c matches fastC15_p6g (68.3 ms) with much better fidelity. Its worst cosine is 0.9983 against 0.981.
+- **Other rewrites of mode D without the patch change:** turning off the conv-bias and batch-norm fusion passes gave 83.7 and 83.6 ms, and
+  so made no difference.
+- **Not measured:** mode D on the GPU or on the M4. The M4 gained less from earlier rewrites, so don't assume the same gains there.
+
+### The on-chip working-set limit
+
+`micro_ane.py sweep` on 256-channel stacks shows a step between 1792 and 2048 KiB. Throughput falls from 2.41 to 1.57 trillion
+MAC/s, writes per run rise from 0.018 to 0.067 GB, and the port reaches about 62 GB/s. Mode C has activations of about 4.98 MB and
+3.74 MB in every block, and `aneopt audit` finds none over the limit in mode D. The 1024-channel stacks show a smaller drop, from 3.86
+to 3.13 trillion MAC/s, between 1154 and 2048 KiB.
+
+This explains part of the unexplained reads above, but not all of them. Mode D still reads 2.08 GB per image from about 0.6 GB of
+weights.
+
+### Comparison with ANEForge
+
+ANEForge 0.4.0 compiles to private `e5rt` APIs without CoreML. The port in `pe_aneforge.py` mirrors modes C and D, and always uses the
+two-stage patch conv, because the alternatives failed: `space_to_depth` by 7 or 14 wouldn't compile, and a 14x14 conv hit a Python
+shape check.
+
+| Graph | ANEForge ms | CoreML ms | ANEForge worst cosine | CoreML worst cosine |
+|---|---:|---:|---:|---:|
+| Mode C with two-stage patch conv | 84.6 | 84.0 | 0.999788 | 0.999794 |
+| Mode D, without its pooling split | 74.1 | 73.5 (with it) | 0.999802 | 0.999790 |
+| Mode D, 8-bit conv weights | 69.6 | 68.5 | 0.998319 | 0.998269 |
+
+ANEForge compiles the full graph in about 55 s. Its zero-copy path takes about 0.8 ms less than a call with copies. Fidelity and traffic
+closely match CoreML on the same graph, so we see no speed advantage from the direct route on this model.
 
 ## Projection for the M6 (not measured)
 
