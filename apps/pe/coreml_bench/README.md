@@ -67,7 +67,7 @@ method to another model, see [`OPTIMISATION.md`](../../aneopt/OPTIMISATION.md).
 | Script | What it does |
 |---|---|
 | `export_coreml.py` | Converts the original model to FP16 and FP32 CoreML packages |
-| `pe_fast.py` | Builds the rewritten graphs, modes A, B, C and D |
+| `pe_fast.py` | Builds the rewritten graphs, modes A to E |
 | `quantize.py` | Builds `w8`, `p6`, `p4` and `a8w8` from the FP16 package |
 | `variants.py` | Builds quantised mode C, batch-4 graphs and macOS 15 grouped palettes |
 | `prep_data.py` | Preprocesses Imagenette into `data/` |
@@ -89,7 +89,8 @@ Both gave broken output when tested, as `RESULTS.md` describes.
 | `pe_l14_fastA` | Original layout, with attention and RoPE cleaned up |
 | `pe_l14_fastB` | Channels-first `(B,C,1,S)`, 1x1 convs, RoPE swap as a fixed grouped conv |
 | `pe_l14_fastC` | B, with attention run per head |
-| `pe_l14_fastD` | C, with wide layers split by channel and a two-stage patch conv. The fastest lossless graph on the M2 Pro |
+| `pe_l14_fastD` | C, with wide layers split by channel and a two-stage patch conv |
+| `pe_l14_fastE` | D, with block attention done by `aneopt`'s `attend_cf`. The fastest lossless graph on the M2 Pro. `run.sh` doesn't build it, so run `pe_fast.py E` with an `aneopt` that has `attend_cf` |
 | `*_w8`, `*_p6` | 8-bit weights, 6-bit palettised weights |
 | `*_w8c` | 8-bit conv weights only, which keeps positional tables at full precision |
 | `*15_p6g` | 6-bit palette per channel group, needs macOS 15 |
