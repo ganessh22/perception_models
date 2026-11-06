@@ -17,7 +17,7 @@ Measured in November 2026. The raw data behind every table is in [`reference/`](
   weights on the GPU, which takes over 800 ms on both machines.
 - **Newer and faster, on the M2 Pro only:** mode D takes 73.5 ms against mode C's 93.2-94.2 ms, with the same fidelity. With
   8-bit conv weights it takes 68.5 ms, with a worst cosine of 0.9983. The tables below predate it, so see
-  [mode D](#mode-d-m2-pro-only).
+  [mode D](#mode-d-m2-pro-only). [Mode E](#mode-e-attend_cf-in-the-blocks) is faster still at 55.5 ms, with the same fidelity.
 
 ## Test setup
 
@@ -334,6 +334,22 @@ lessons are in [`OPTIMISATION.md`](../../aneopt/OPTIMISATION.md), and the raw da
 - **Other rewrites of mode D without the patch change:** turning off the conv-bias and batch-norm fusion passes gave 83.7 and 83.6 ms, and
   so made no difference.
 - **Not measured:** mode D on the GPU or on the M4. The M4 gained less from earlier rewrites, so don't assume the same gains there.
+
+### Mode E: `attend_cf` in the blocks
+
+Mode E is mode D with each block's attention done by `aneopt.layers.attend_cf`, on channels-first tensors. RoPE is unchanged, and the pooling attention still uses `attend`.
+Latency and traffic are the median of five alternating 15 s runs in new processes, measured together, so mode D is re-measured here. Raw data is in `reference/m2pro/attend_cf.jsonl`.
+
+| Model | Median ms | Reads per image | Writes per image | DRAM reads per image | Mean cosine | Worst cosine |
+|---|---:|---:|---:|---:|---:|---:|
+| fastD | 72.9 | 2.08 GB | 0.68 GB | 0.76 GB | 0.999951 | 0.999790 |
+| fastE | 55.5 | 1.83 GB | 0.60 GB | 0.76 GB | 0.999951 | 0.999795 |
+
+- **Saving:** 17.4 ms, or 24%, against the microbenchmark's prediction of up to about 18 ms. Both score 100% top-1 and are planned entirely on the Neural Engine.
+- **Cause:** not known. Traffic barely changes and MACs are identical, so `aneopt diagnose` reports 76% of peak MAC rate against 59%, with both compute-limited. Those shares used a 4.51 peak. Against the 8.45 peak they're about 41% and 31%.
+- **Load time:** noisy here at 45-107 s for fastE and 56-533 s for fastD, with another build running on the machine, so these aren't a comparison.
+- **Not measured:** the M4, the GPU, and 8-bit weights on mode E.
+- **Setup:** mode E needs `aneopt` with `attend_cf`, from [its repository](https://github.com/ganessh22/aneopt). The older copy that `setup.sh` installs doesn't have it. Modes A to D still build with that copy.
 
 ### The on-chip working-set limit
 

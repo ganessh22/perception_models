@@ -1,0 +1,15 @@
+{"kind": "run", "model": "fastD", "round": 1, "load_s": 99.8, "images": 203, "median_ms": 73.2, "read_gb_img": 2.077, "write_gb_img": 0.684, "dram_read_gb_img": 0.759, "port_gb_s": 37.1, "cpu_dram_gb_s": 20.8}
+{"kind": "run", "model": "fastE", "round": 1, "load_s": 52.3, "images": 268, "median_ms": 55.7, "read_gb_img": 1.825, "write_gb_img": 0.597, "dram_read_gb_img": 0.758, "port_gb_s": 43.2, "cpu_dram_gb_s": 18.8}
+{"kind": "run", "model": "fastE", "round": 2, "load_s": 91.2, "images": 268, "median_ms": 55.7, "read_gb_img": 1.826, "write_gb_img": 0.597, "dram_read_gb_img": 0.759, "port_gb_s": 43.2, "cpu_dram_gb_s": 12.8}
+{"kind": "run", "model": "fastD", "round": 2, "load_s": 79.7, "images": 206, "median_ms": 72.9, "read_gb_img": 2.078, "write_gb_img": 0.685, "dram_read_gb_img": 0.759, "port_gb_s": 37.8, "cpu_dram_gb_s": 12.1}
+{"kind": "run", "model": "fastD", "round": 3, "load_s": 137.0, "images": 206, "median_ms": 72.9, "read_gb_img": 2.077, "write_gb_img": 0.684, "dram_read_gb_img": 0.758, "port_gb_s": 37.9, "cpu_dram_gb_s": 2.7}
+{"kind": "run", "model": "fastE", "round": 3, "load_s": 54.7, "images": 270, "median_ms": 55.5, "read_gb_img": 1.825, "write_gb_img": 0.597, "dram_read_gb_img": 0.759, "port_gb_s": 43.5, "cpu_dram_gb_s": 2.9}
+{"kind": "run", "model": "fastE", "round": 4, "load_s": 69.4, "images": 271, "median_ms": 55.5, "read_gb_img": 1.824, "write_gb_img": 0.596, "dram_read_gb_img": 0.759, "port_gb_s": 43.6, "cpu_dram_gb_s": 1.9}
+{"kind": "run", "model": "fastD", "round": 4, "load_s": 56.2, "images": 207, "median_ms": 72.7, "read_gb_img": 2.076, "write_gb_img": 0.684, "dram_read_gb_img": 0.757, "port_gb_s": 37.9, "cpu_dram_gb_s": 1.7}
+{"kind": "run", "model": "fastD", "round": 5, "load_s": 57.1, "images": 207, "median_ms": 72.7, "read_gb_img": 2.076, "write_gb_img": 0.684, "dram_read_gb_img": 0.758, "port_gb_s": 37.9, "cpu_dram_gb_s": 2.0}
+{"kind": "run", "model": "fastE", "round": 5, "load_s": 44.8, "images": 270, "median_ms": 55.5, "read_gb_img": 1.826, "write_gb_img": 0.596, "dram_read_gb_img": 0.756, "port_gb_s": 43.5, "cpu_dram_gb_s": 2.2}
+{"kind": "fidelity", "model": "fastD", "images": 100, "cos_mean": 0.999951, "cos_worst": 0.99979, "top1": 1.0}
+{"kind": "fidelity", "model": "fastE", "images": 100, "cos_mean": 0.999951, "cos_worst": 0.999795, "top1": 1.0}
+{"kind": "probe", "heads": 16, "dim": 64, "form": "einsum", "tokens": 577, "groups": 1, "tiles": 1, "block_ms": 0.411, "call_ms": 1.792, "n8_read_gb": 0.1435, "max_err": 0.00358, "mismatch": false}
+{"kind": "probe", "heads": 16, "dim": 64, "form": "per_head_matmul", "tokens": 577, "groups": 1, "tiles": 1, "block_ms": 1.325, "call_ms": 1.671, "n8_read_gb": 0.0823, "max_err": 0.00358, "mismatch": false}
+{"kind": "probe", "heads": 16, "dim": 64, "form": "batched_matmul", "tokens": 577, "groups": 1, "tiles": 1, "block_ms": 5.22, "call_ms": 2.569, "n8_read_gb": 1.7377, "max_err": 0.00358, "mismatch": false}

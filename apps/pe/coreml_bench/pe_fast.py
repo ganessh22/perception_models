@@ -8,6 +8,7 @@ Modes, so each change's gain can be measured separately:
   C  B, with attention run per head (Apple's "split einsum" pattern for the ANE).
   D  C, with two changes. Wide QKV, MLP and pooling layers are split into 1024-channel branches, so no activation
      passes the Neural Engine's on-chip limit of about 2 MB. The 14x14 patch conv becomes an exact two-stage conv.
+  E  D, with each block's attention done by attend_cf's per-head einsums on (B,C,1,S), with no reshape to (B,h,d,S).
 Variants that isolate each part of D: CP is C with the two-stage patch conv. DS is D without it. DM and DQ split only
 the MLP or only QKV, also without it.
 """
@@ -103,6 +104,17 @@ class AttnC(AttnB):
     split_heads = True
 
 
+class AttnE(AttnB):
+    def forward(self, x):
+        from aneopt.layers import attend_cf  # local because the older aneopt copy that setup.sh installs doesn't have it
+
+        q, k, v = self.proj(x)
+        # The RoPE tables hold the same (h, d) channel order that attend_cf slices, so the rotation is unchanged.
+        q = q * self.cos + self.swap(q) * self.sin
+        k = k * self.cos + self.swap(k) * self.sin
+        return self.out(attend_cf(q, k, v, self.scale, self.h))
+
+
 class BlockB(nn.Module):
     def __init__(self, r, freq, attn_cls, split_mlp=False, split_qkv=False):
         super().__init__()
@@ -129,7 +141,7 @@ class FastPE(nn.Module):
         super().__init__()
         self.mode = mode
         freq = rope_tables(m)
-        self.conv1 = factor_patch_conv(m.conv1, 7) if mode in ("D", "CP") else m.conv1
+        self.conv1 = factor_patch_conv(m.conv1, 7) if mode in ("D", "E", "CP") else m.conv1
         ap = m.attn_pool
         self.pool_h, self.pool_d = ap.num_heads, ap.embed_dim // ap.num_heads
         e = m.width
@@ -151,9 +163,9 @@ class FastPE(nn.Module):
             self.pool_out = ap.attn.out_proj
             self.final = nn.Parameter(m.proj.data.clone())
         else:
-            attn_cls = AttnB if mode == "B" else AttnC
-            split_mlp, split_qkv = mode in ("D", "DS", "DM"), mode in ("D", "DS", "DQ")
-            self.split_pool = mode == "D"
+            attn_cls = {"B": AttnB, "E": AttnE}.get(mode, AttnC)
+            split_mlp, split_qkv = mode in ("D", "E", "DS", "DM"), mode in ("D", "E", "DS", "DQ")
+            self.split_pool = mode in ("D", "E")
             self.cls = nn.Parameter(m.class_embedding.data[None, :, None, None].clone())
             self.pos = nn.Parameter(m.positional_embedding.data.T[None, :, None, :].clone())
             self.ln_pre, self.ln_post = LayerNormCF(m.ln_pre), LayerNormCF(m.ln_post)
